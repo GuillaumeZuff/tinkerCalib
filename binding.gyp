@@ -1,6 +1,6 @@
 {
   "targets": [{
-    "target_name": "tinkerCalib",
+    "target_name": "tinkercalib",
     "sources": ["src/tinkerCalib.cc", "src/calibration.cpp", "src/posConverter.cpp"],
 		'conditions': [
 			['OS=="mac"', {

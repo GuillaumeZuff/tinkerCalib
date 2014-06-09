@@ -1,4 +1,4 @@
-var addon = require('./build/Release/simpliCalib');
+var addon = require('../build/Release/tinkercalib');
 var result = addon.calibrate({
   nearPlane: 100,
   farPlane: 1200,

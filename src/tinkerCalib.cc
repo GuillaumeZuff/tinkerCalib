@@ -181,4 +181,4 @@ void Init(Handle<Object> exports)
 
 }
 
-NODE_MODULE(simpliCalib, Init)
+NODE_MODULE(tinkercalib, Init)
