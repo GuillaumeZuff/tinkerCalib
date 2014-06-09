@@ -1,0 +1,12 @@
+{
+  "name": "tinkerCalib",
+  "version": "0.0.0",
+  "description": "A wrapper around several openCV calibration functions.",
+  "main": "build/Release/tinkerCalib.node",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "author": "",
+  "license": "BSD"
+}
