@@ -14,8 +14,8 @@
 			}],
 			['OS=="linux"', {
     		"libraries": [
-        	"/usr/lib/libopencv_core.so",
-        	"/usr/lib/libopencv_calib3d.so"
+        	"/usr/lib/x86_64-linux-gnu/libopencv_core.so",
+        	"/usr/lib/x86_64-linux-gnu/libopencv_calib3d.so"
     		]
 			}],
 
