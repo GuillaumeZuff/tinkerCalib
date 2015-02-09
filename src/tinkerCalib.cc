@@ -1,4 +1,5 @@
 #include <node.h>
+#include <nan.h>
 #include <iostream>
 #include "calibration.h"
 
@@ -8,7 +9,7 @@ using namespace std;
 template<class T>
 std::vector<T> getArray(const Local<Object> &obj, const std::string &name) {
     std::vector<T> vect;
-    Local<Value> val = obj->Get(String::New(name.c_str()));
+    Local<Value> val = obj->Get(NanNew<String>(name.c_str()));
     Local<Array> array = Local<Array>::Cast(val);
     for (unsigned int i=0; i<array->Length(); ++i) {
         Local<Number> n = Local<Number>::Cast(array->Get(i));
@@ -19,13 +20,13 @@ std::vector<T> getArray(const Local<Object> &obj, const std::string &name) {
 
 template<class T>
 T getNumber(const Local<Object> &obj, const std::string &name) {
-    Local<Value> val = obj->Get(String::New(name.c_str()));
+    Local<Value> val = obj->Get(NanNew<String>(name.c_str()));
     T number = Local<Number>::Cast(val)->NumberValue();
     return number;
 }
 
 std::string getString(const Local<Object> &obj, const std::string &name) {
-    Local<Value> val = obj->Get(String::New(name.c_str()));
+    Local<Value> val = obj->Get(NanNew<String>(name.c_str()));
     String::Utf8Value str(val->ToString());
     return string(*str);
 }
@@ -46,8 +47,8 @@ Handle<Object> getCalibrationResult(Calibration &calib, bool isCamera) {
     }
     // create result object
     Local<Object> result = Object::New();
-    result->Set(String::New("projection"), projection);
-    result->Set(String::New("modelview"), mv);
+    result->Set(NanNew<String>("projection"), projection);
+    result->Set(NanNew<String>("modelview"), mv);
 
     return scope.Close(result);
 }
@@ -59,37 +60,37 @@ Handle<Value> Calibrate(const Arguments &args) {
 
     if (args[0]->IsObject()) {
         Local<Object> obj = Local<Object>::Cast(args[0]);
-        if (obj->Has(String::New("frameSize"))) {
+        if (obj->Has(NanNew<String>("frameSize"))) {
             std::vector<int> vect = getArray<int>(obj, "frameSize");
             cv::Size frameSize = cv::Size(vect[0], vect[1]);
             calib.setFrameSize(frameSize);
         }
-        if (obj->Has(String::New("nearPlane"))) {
+        if (obj->Has(NanNew<String>("nearPlane"))) {
             int nearPlane = getNumber<int>(obj, "nearPlane");
             calib.setNearPlane(nearPlane);
         }
-        if(obj->Has(String::New("farPlane"))) {
+        if(obj->Has(NanNew<String>("farPlane"))) {
             int farPlane = getNumber<int>(obj, "farPlane");
             calib.setFarPlane(farPlane);
         }
-        if(obj->Has(String::New("chessboardSize"))) {
+        if(obj->Has(NanNew<String>("chessboardSize"))) {
             std::vector<int> vect = getArray<int>(obj, "chessboardSize");
             cv::Size chessboardSize = cv::Size(vect[0], vect[1]);
             calib.setChessboardSize(chessboardSize);
         }
-        if (obj->Has(String::New("chessboardCellSize"))) {
+        if (obj->Has(NanNew<String>("chessboardCellSize"))) {
             int cellSize = getNumber<int>(obj, "chessboardCellSize");
             calib.setChessboardCellSize(cellSize);
         }
-        if (obj->Has(String::New("intrinsic"))) {
+        if (obj->Has(NanNew<String>("intrinsic"))) {
             vector<float> intrinsic = getArray<float>(obj, "intrinsic");
             calib.setIntrinsicMatrix(intrinsic);
         }
-        if (obj->Has(String::New("distortion"))) {
+        if (obj->Has(NanNew<String>("distortion"))) {
             vector<float> distortion = getArray<float>(obj, "distortion");
             calib.setDistortionMatrix(distortion);
         }
-        if (obj->Has(String::New("filename"))) {
+        if (obj->Has(NanNew<String>("filename"))) {
             filename = getString(obj, "filename");
         }
     }
@@ -99,7 +100,7 @@ Handle<Value> Calibrate(const Arguments &args) {
     bool isCamera = true;
     if (calib.calibrate(filename,isCamera)) {
         Handle<Object> camera = getCalibrationResult(calib,isCamera);
-        result->Set(String::New("camera"), camera);
+        result->Set(NanNew<String>("camera"), camera);
     } else {
         success = false;
     }
@@ -107,12 +108,12 @@ Handle<Value> Calibrate(const Arguments &args) {
     isCamera = false;
     if (success && calib.calibrate(filename,isCamera)) {
         Handle<Object> renderer = getCalibrationResult(calib,isCamera);
-        result->Set(String::New("renderer"), renderer);
+        result->Set(NanNew<String>("renderer"), renderer);
     } else {
         success = false;
     }
 
-    result->Set(String::New("success"), Boolean::New(success));
+    result->Set(NanNew<String>("success"), Boolean::New(success));
     return scope.Close(result);
 }
 
@@ -123,31 +124,31 @@ Handle<Value> CalibrateFromPoints(const Arguments &args) {
 
     if (args[0]->IsObject()) {
         Local<Object> obj = Local<Object>::Cast(args[0]);
-        if (obj->Has(String::New("frameSize"))) {
+        if (obj->Has(NanNew<String>("frameSize"))) {
             std::vector<int> vect = getArray<int>(obj, "frameSize");
             cv::Size frameSize = cv::Size(vect[0], vect[1]);
             calib.setFrameSize(frameSize);
         }
-        if (obj->Has(String::New("nearPlane"))) {
+        if (obj->Has(NanNew<String>("nearPlane"))) {
             int nearPlane = getNumber<int>(obj, "nearPlane");
             calib.setNearPlane(nearPlane);
         }
-        if(obj->Has(String::New("farPlane"))) {
+        if(obj->Has(NanNew<String>("farPlane"))) {
             int farPlane = getNumber<int>(obj, "farPlane");
             calib.setFarPlane(farPlane);
         }
-        if (obj->Has(String::New("intrinsic"))) {
+        if (obj->Has(NanNew<String>("intrinsic"))) {
             vector<float> intrinsic = getArray<float>(obj, "intrinsic");
             calib.setIntrinsicMatrix(intrinsic);
         }
-        if (obj->Has(String::New("distortion"))) {
+        if (obj->Has(NanNew<String>("distortion"))) {
             vector<float> distortion = getArray<float>(obj, "distortion");
             calib.setDistortionMatrix(distortion);
         }
-        if (obj->Has(String::New("imagePoints"))) {
+        if (obj->Has(NanNew<String>("imagePoints"))) {
             imagePoints = getArray<float>(obj,"imagePoints");
         }
-        if (obj->Has(String::New("objectPoints"))) {
+        if (obj->Has(NanNew<String>("objectPoints"))) {
             objectPoints = getArray<float>(obj,"objectPoints");
         }
     }
@@ -157,7 +158,7 @@ Handle<Value> CalibrateFromPoints(const Arguments &args) {
     bool isCamera = true;
     if (calib.calibrateFromPoints(imagePoints,objectPoints,isCamera)) {
         Handle<Object> camera = getCalibrationResult(calib,isCamera);
-        result->Set(String::New("camera"), camera);
+        result->Set(NanNew<String>("camera"), camera);
     } else {
         success = false;
     }
@@ -165,12 +166,12 @@ Handle<Value> CalibrateFromPoints(const Arguments &args) {
     isCamera = false;
     if (success && calib.calibrateFromPoints(imagePoints,objectPoints,isCamera)) {
         Handle<Object> renderer = getCalibrationResult(calib,isCamera);
-        result->Set(String::New("renderer"), renderer);
+        result->Set(NanNew<String>("renderer"), renderer);
     } else {
         success = false;
     }
 
-    result->Set(String::New("success"), Boolean::New(success));
+    result->Set(NanNew<String>("success"), Boolean::New(success));
     return scope.Close(result);
 }
 

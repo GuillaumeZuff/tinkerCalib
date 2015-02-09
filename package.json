@@ -8,5 +8,8 @@
   },
   "repository": "",
   "author": "",
-  "license": "BSD"
+  "license": "BSD",
+  "dependencies": {
+    "nan": "^1.6.2"
+  }
 }
