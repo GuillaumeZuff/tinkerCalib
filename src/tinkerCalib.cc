@@ -32,29 +32,29 @@ std::string getString(const Local<Object> &obj, const std::string &name) {
 }
 
 Handle<Object> getCalibrationResult(Calibration &calib, bool isCamera) {
-    HandleScope scope;
+    NanEscapableScope();
     // projection matrix
     vector<float> projVect = calib.getProjectionMatrix(isCamera);
-    Local<Array> projection = Array::New(projVect.size());
+    Local<Array> projection = NanNew<Array>(projVect.size());
     for (int i=0; i<(int)projVect.size(); ++i) {
-        projection->Set(i, Number::New(projVect[i]));
+        projection->Set(i, NanNew<Number>(projVect[i]));
     }
     // modelview matrix
     vector<float> mvVect = calib.getMvMatrix(isCamera);
-    Local<Array> mv = Array::New(mvVect.size());
+    Local<Array> mv = NanNew<Array>(mvVect.size());
     for (int i=0; i<(int)mvVect.size(); i++) {
-        mv->Set(i, Number::New(mvVect[i]));
+        mv->Set(i, NanNew<Number>(mvVect[i]));
     }
     // create result object
-    Local<Object> result = Object::New();
+    Local<Object> result;
     result->Set(NanNew<String>("projection"), projection);
     result->Set(NanNew<String>("modelview"), mv);
 
-    return scope.Close(result);
+    return NanEscapeScope(result);
 }
 
-Handle<Value> Calibrate(const Arguments &args) {
-    HandleScope scope;
+NAN_METHOD(Calibrate) {
+    NanScope();
     Calibration calib;
     string filename = "";
 
@@ -95,7 +95,7 @@ Handle<Value> Calibrate(const Arguments &args) {
         }
     }
 
-    Local<Object> result = Object::New();
+    Local<Object> result;
     bool success = true;
     bool isCamera = true;
     if (calib.calibrate(filename,isCamera)) {
@@ -113,12 +113,12 @@ Handle<Value> Calibrate(const Arguments &args) {
         success = false;
     }
 
-    result->Set(NanNew<String>("success"), Boolean::New(success));
-    return scope.Close(result);
+    result->Set(NanNew<String>("success"), NanNew<Boolean>(success));
+    NanReturnValue(result);
 }
 
-Handle<Value> CalibrateFromPoints(const Arguments &args) {
-    HandleScope scope;
+NAN_METHOD(CalibrateFromPoints) {
+    NanScope();
     Calibration calib;
     vector<float> imagePoints, objectPoints;
 
@@ -153,7 +153,7 @@ Handle<Value> CalibrateFromPoints(const Arguments &args) {
         }
     }
 
-    Local<Object> result = Object::New();
+    Local<Object> result;
     bool success = true;
     bool isCamera = true;
     if (calib.calibrateFromPoints(imagePoints,objectPoints,isCamera)) {
@@ -171,14 +171,20 @@ Handle<Value> CalibrateFromPoints(const Arguments &args) {
         success = false;
     }
 
-    result->Set(NanNew<String>("success"), Boolean::New(success));
-    return scope.Close(result);
+    result->Set(NanNew<String>("success"), NanNew<Boolean>(success));
+    NanReturnValue(result);
 }
 
 void Init(Handle<Object> exports)
 {
-	exports->Set(String::NewSymbol("calibrate"), FunctionTemplate::New(Calibrate)->GetFunction());
-	exports->Set(String::NewSymbol("calibrateFromPoints"), FunctionTemplate::New(CalibrateFromPoints)->GetFunction());
+	exports->Set(
+            NanNew<String>("calibrate"),
+            NanNew<FunctionTemplate>(Calibrate)->GetFunction()
+        );
+	exports->Set(
+            NanNew<String>("calibrateFromPoints"), 
+            NanNew<FunctionTemplate>(CalibrateFromPoints)->GetFunction()
+        );
 
 }
 
