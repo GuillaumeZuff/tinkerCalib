@@ -1,6 +1,6 @@
 {
   "name": "tinkercalib",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A wrapper around several openCV calibration functions.",
   "main": "build/Release/tinkercalib.node",
   "scripts": {
