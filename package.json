@@ -1,6 +1,6 @@
 {
   "name": "tinkercalib",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "A wrapper around several openCV calibration functions.",
   "main": "build/Release/tinkercalib.node",
   "scripts": {
@@ -8,8 +8,5 @@
   },
   "repository": "",
   "author": "",
-  "license": "BSD",
-  "dependencies": {
-    "nan": "^1.6.2"
-  }
+  "license": "BSD"
 }
