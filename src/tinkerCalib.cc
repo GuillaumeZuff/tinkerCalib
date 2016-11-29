@@ -179,11 +179,25 @@ Local<Object> getCalibrationResult(Calibration &calib, bool isCamera) {
         mv->Set(i, Number::New(isolate, mvVect[i]));
     }
     // create result object
-    Local<Object> result;
+    Local<Object> result = Object::New(isolate);
     result->Set(String::NewFromUtf8(isolate, "projection"), projection);
     result->Set(String::NewFromUtf8(isolate, "modelview"), mv);
 
     return result;
+}
+
+void getCalibrationPoints(const FunctionCallbackInfo<Value>& args, vector<float>& imagePoints, vector<float>& objectPoints) {
+    if (args[0]->IsObject()) {
+        Local<Object> obj = Local<Object>::Cast(args[0]);
+        Local<String> imageStr = String::NewFromUtf8(isolate, "imagePoints");
+        Local<String> objectStr = String::NewFromUtf8(isolate, "objectPoints");
+        if (obj->Has(imageStr)) {
+            imagePoints = getArray<float>(obj, "imagePoints");
+        }
+        if (obj->Has(objectStr)) {
+            objectPoints = getArray<float>(obj, "objectPoints");
+        }
+    }
 }
 
 void configureCalibration(const FunctionCallbackInfo<Value>& args, Calibration &calib, string &filename) {
@@ -197,7 +211,6 @@ void configureCalibration(const FunctionCallbackInfo<Value>& args, Calibration &
         Local<String> intrinsic = String::NewFromUtf8(isolate, "intrinsic");
         Local<String> distortion = String::NewFromUtf8(isolate, "distortion");
         Local<String> filenameMember = String::NewFromUtf8(isolate, "filename");
-        string filename = "";
         if (obj->Has(frameSize)) {
             std::vector<int> vect = getArray<int>(obj, "frameSize");
             cv::Size frameSize = cv::Size(vect[0], vect[1]);
@@ -241,7 +254,7 @@ void Calibrate(const FunctionCallbackInfo<Value>& args) {
     string filename = "";
     configureCalibration(args, calib, filename);
 
-    Local<Object> result;
+    Local<Object> result = Object::New(isolate);
     bool success = true;
     bool isCamera = true;
     if (calib.calibrate(filename,isCamera)) {
@@ -259,20 +272,23 @@ void Calibrate(const FunctionCallbackInfo<Value>& args) {
         success = false;
     }
 
-    result->Set(String::NewFromUtf8(isolate,"success"), Boolean::New(isolate, success));
+    Local<Boolean> successValue = Boolean::New(isolate,success);
+    result->Set(String::NewFromUtf8(isolate,"success"), successValue);
     args.GetReturnValue().Set(result);
 }
 
 
 void CalibrateFromPoints(const FunctionCallbackInfo<Value>& args) {
-    Isolate* isolate = args.GetIsolate();
+    isolate = args.GetIsolate();
     Calibration calib;
     string filename = "";
     configureCalibration(args, calib, filename);
 
     vector<float> imagePoints, objectPoints;
+    getCalibrationPoints(args, imagePoints, objectPoints);
 
-    Local<Object> result;
+
+    Local<Object> result = Object::New(isolate);
     bool success = true;
     bool isCamera = true;
     if (calib.calibrateFromPoints(imagePoints,objectPoints,isCamera)) {

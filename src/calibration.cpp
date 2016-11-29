@@ -111,6 +111,7 @@ bool Calibration::doCalibration(const std::vector<Point2f> &camPoints, const std
 bool Calibration::calibrate(const std::string &file,bool isCamera)
 {
     //cout<<"Camera? "<<isCamera<<endl;
+    cout<<"File"<<file<<endl;
     Mat frame = imread(file, 0);
     if (!frame.data) {
 	cout<<"Calibration: "<<"file not found: "<<file<<endl;
