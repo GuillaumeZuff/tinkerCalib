@@ -7,6 +7,9 @@
         ],
     	"libraries": [
             '<!@(pkg-config --libs opencv)'
-    	]
+    	],
+        "cflags_cc!": ['-fno-rtti', '-fno-exceptions'
+        ],
+        'cflags!': ['-fno-exceptions'],
     }],
 }
