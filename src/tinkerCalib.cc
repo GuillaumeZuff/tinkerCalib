@@ -12,8 +12,10 @@ using v8::Value;
 using v8::Array;
 using v8::Number;
 using v8::Boolean;
+using v8::Context;
 
 Isolate* isolate;
+Local<Context> context;
 
 //NAN_METHOD(Calibrate) {
 //    NanScope();
@@ -154,15 +156,15 @@ template<class T>
 T getNumber(const Local<Object> &obj, const std::string &name) {
     //Local<Value> val = obj->Get(NanNew<String>(name.c_str()));
     Local<Value> val = obj->Get(String::NewFromUtf8(isolate, name.c_str()));
-    T number = Local<Number>::Cast(val)->NumberValue();
+    T number = Local<Number>::Cast(val)->Value();
     return number;
 }
 
 std::string getString(const Local<Object> &obj, const std::string &name) {
     //Local<Value> val = obj->Get(NanNew<String>(name.c_str()));
     Local<Value> val = obj->Get(String::NewFromUtf8(isolate, name.c_str()));
-    String::Utf8Value str(val->ToString());
-    return string(*str);
+    std::string s = *(String::Utf8Value(isolate, val));
+    return s;
 }
 
 Local<Object> getCalibrationResult(Calibration &calib, bool isCamera) {
@@ -189,12 +191,12 @@ Local<Object> getCalibrationResult(Calibration &calib, bool isCamera) {
 void getCalibrationPoints(const FunctionCallbackInfo<Value>& args, vector<float>& imagePoints, vector<float>& objectPoints) {
     if (args[0]->IsObject()) {
         Local<Object> obj = Local<Object>::Cast(args[0]);
-        Local<String> imageStr = String::NewFromUtf8(isolate, "imagePoints");
-        Local<String> objectStr = String::NewFromUtf8(isolate, "objectPoints");
-        if (obj->Has(imageStr)) {
+        Local<Value> imageStr = String::NewFromUtf8(isolate, "imagePoints");
+        Local<Value> objectStr = String::NewFromUtf8(isolate, "objectPoints");
+        if (obj->Has(context, imageStr).FromMaybe(false)) {
             imagePoints = getArray<float>(obj, "imagePoints");
         }
-        if (obj->Has(objectStr)) {
+        if (obj->Has(context, objectStr).FromMaybe(false)) {
             objectPoints = getArray<float>(obj, "objectPoints");
         }
     }
@@ -211,37 +213,37 @@ void configureCalibration(const FunctionCallbackInfo<Value>& args, Calibration &
         Local<String> intrinsic = String::NewFromUtf8(isolate, "intrinsic");
         Local<String> distortion = String::NewFromUtf8(isolate, "distortion");
         Local<String> filenameMember = String::NewFromUtf8(isolate, "filename");
-        if (obj->Has(frameSize)) {
+        if (obj->Has(context, frameSize).FromMaybe(false)) {
             std::vector<int> vect = getArray<int>(obj, "frameSize");
             cv::Size frameSize = cv::Size(vect[0], vect[1]);
             calib.setFrameSize(frameSize);
         }
-        if (obj->Has(nearPlane)) {
+        if (obj->Has(context, nearPlane).FromMaybe(false)) {
             int nearPlane = getNumber<int>(obj, "nearPlane");
             calib.setNearPlane(nearPlane);
         }
-        if(obj->Has(farPlane)) {
+        if(obj->Has(context, farPlane).FromMaybe(false)) {
             int farPlane = getNumber<int>(obj, "farPlane");
             calib.setFarPlane(farPlane);
         }
-        if(obj->Has(chessboardSize)) {
+        if(obj->Has(context, chessboardSize).FromMaybe(false)) {
             std::vector<int> vect = getArray<int>(obj, "chessboardSize");
             cv::Size chessboardSize = cv::Size(vect[0], vect[1]);
             calib.setChessboardSize(chessboardSize);
         }
-        if (obj->Has(chessboardCellSize)) {
+        if (obj->Has(context, chessboardCellSize).FromMaybe(false)) {
             int cellSize = getNumber<int>(obj, "chessboardCellSize");
             calib.setChessboardCellSize(cellSize);
         }
-        if (obj->Has(intrinsic)) {
+        if (obj->Has(context, intrinsic).FromMaybe(false)) {
             vector<float> intrinsic = getArray<float>(obj, "intrinsic");
             calib.setIntrinsicMatrix(intrinsic);
         }
-        if (obj->Has(distortion)) {
+        if (obj->Has(context, distortion).FromMaybe(false)) {
             vector<float> distortion = getArray<float>(obj, "distortion");
             calib.setDistortionMatrix(distortion);
         }
-        if (obj->Has(filenameMember)) {
+        if (obj->Has(context, filenameMember).FromMaybe(false)) {
             filename = getString(obj, "filename");
         }
     }
@@ -250,6 +252,7 @@ void configureCalibration(const FunctionCallbackInfo<Value>& args, Calibration &
 
 void Calibrate(const FunctionCallbackInfo<Value>& args) {
     isolate = args.GetIsolate();
+    context = Context::New(isolate);
     Calibration calib;
     string filename = "";
     configureCalibration(args, calib, filename);
@@ -280,6 +283,7 @@ void Calibrate(const FunctionCallbackInfo<Value>& args) {
 
 void CalibrateFromPoints(const FunctionCallbackInfo<Value>& args) {
     isolate = args.GetIsolate();
+    context = Context::New(isolate);
     Calibration calib;
     string filename = "";
     configureCalibration(args, calib, filename);
