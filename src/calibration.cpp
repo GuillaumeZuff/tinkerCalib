@@ -197,8 +197,8 @@ void Calibration::setDistortionMatrix(const std::vector<float> &distortion) {
 
 bool Calibration::findChessboard(const cv::Mat &frame) {
     return findChessboardCorners(frame, m_calibData.chessboardSize, m_camPxPoints,
-			CV_CALIB_CB_ADAPTIVE_THRESH + CV_CALIB_CB_FILTER_QUADS
-					+ CV_CALIB_CB_FAST_CHECK);
+			cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_FILTER_QUADS
+					+ cv::CALIB_CB_FAST_CHECK);
 } 
 
 std::vector<float> Calibration::getProjectionMatrix(bool isCamera) const {

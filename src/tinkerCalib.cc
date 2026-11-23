@@ -1,319 +1,170 @@
-#include <node.h>
-#include <iostream>
+// Node-API binding (node-addon-api) for the calibration code.
+//
+// JS interface (unchanged since 0.2.x):
+//   calibrate(options)            -> { camera?, renderer?, success }
+//   calibrateFromPoints(options)  -> { camera?, renderer?, success }
+// where camera/renderer are { projection: number[16], modelview: number[16] }.
+//
+// options: frameSize [w, h], nearPlane, farPlane, chessboardSize [w, h],
+// chessboardCellSize, intrinsic number[9], distortion number[<=5],
+// filename (calibrate), imagePoints / objectPoints (calibrateFromPoints,
+// flat [x0, y0, x1, y1, ...] arrays of the same length).
+//
+// Unlike 0.2.x, invalid input and OpenCV errors throw a JS Error instead of
+// crashing the Node process.
+
+#include <napi.h>
+#include <exception>
+#include <string>
+#include <vector>
 #include "calibration.h"
 
-using namespace std;
-using v8::FunctionCallbackInfo;
-using v8::Isolate;
-using v8::Local;
-using v8::Object;
-using v8::String;
-using v8::Value;
-using v8::Array;
-using v8::Number;
-using v8::Boolean;
-
-Isolate* isolate;
-
-//NAN_METHOD(Calibrate) {
-//    NanScope();
-//    Calibration calib;
-//    string filename = "";
-//
-//    if (args[0]->IsObject()) {
-//        Local<Object> obj = Local<Object>::Cast(args[0]);
-//        if (obj->Has(NanNew<String>("frameSize"))) {
-//            std::vector<int> vect = getArray<int>(obj, "frameSize");
-//            cv::Size frameSize = cv::Size(vect[0], vect[1]);
-//            calib.setFrameSize(frameSize);
-//        }
-//        if (obj->Has(NanNew<String>("nearPlane"))) {
-//            int nearPlane = getNumber<int>(obj, "nearPlane");
-//            calib.setNearPlane(nearPlane);
-//        }
-//        if(obj->Has(NanNew<String>("farPlane"))) {
-//            int farPlane = getNumber<int>(obj, "farPlane");
-//            calib.setFarPlane(farPlane);
-//        }
-//        if(obj->Has(NanNew<String>("chessboardSize"))) {
-//            std::vector<int> vect = getArray<int>(obj, "chessboardSize");
-//            cv::Size chessboardSize = cv::Size(vect[0], vect[1]);
-//            calib.setChessboardSize(chessboardSize);
-//        }
-//        if (obj->Has(NanNew<String>("chessboardCellSize"))) {
-//            int cellSize = getNumber<int>(obj, "chessboardCellSize");
-//            calib.setChessboardCellSize(cellSize);
-//        }
-//        if (obj->Has(NanNew<String>("intrinsic"))) {
-//            vector<float> intrinsic = getArray<float>(obj, "intrinsic");
-//            calib.setIntrinsicMatrix(intrinsic);
-//        }
-//        if (obj->Has(NanNew<String>("distortion"))) {
-//            vector<float> distortion = getArray<float>(obj, "distortion");
-//            calib.setDistortionMatrix(distortion);
-//        }
-//        if (obj->Has(NanNew<String>("filename"))) {
-//            filename = getString(obj, "filename");
-//        }
-//    }
-//
-//    Local<Object> result;
-//    bool success = true;
-//    bool isCamera = true;
-//    if (calib.calibrate(filename,isCamera)) {
-//        Handle<Object> camera = getCalibrationResult(calib,isCamera);
-//        result->Set(NanNew<String>("camera"), camera);
-//    } else {
-//        success = false;
-//    }
-//
-//    isCamera = false;
-//    if (success && calib.calibrate(filename,isCamera)) {
-//        Handle<Object> renderer = getCalibrationResult(calib,isCamera);
-//        result->Set(NanNew<String>("renderer"), renderer);
-//    } else {
-//        success = false;
-//    }
-//
-//    result->Set(NanNew<String>("success"), NanNew<Boolean>(success));
-//    NanReturnValue(result);
-//}
-//
-//NAN_METHOD(CalibrateFromPoints) {
-//    NanScope();
-//    Calibration calib;
-//    vector<float> imagePoints, objectPoints;
-//
-//    if (args[0]->IsObject()) {
-//        Local<Object> obj = Local<Object>::Cast(args[0]);
-//        if (obj->Has(NanNew<String>("frameSize"))) {
-//            std::vector<int> vect = getArray<int>(obj, "frameSize");
-//            cv::Size frameSize = cv::Size(vect[0], vect[1]);
-//            calib.setFrameSize(frameSize);
-//        }
-//        if (obj->Has(NanNew<String>("nearPlane"))) {
-//            int nearPlane = getNumber<int>(obj, "nearPlane");
-//            calib.setNearPlane(nearPlane);
-//        }
-//        if(obj->Has(NanNew<String>("farPlane"))) {
-//            int farPlane = getNumber<int>(obj, "farPlane");
-//            calib.setFarPlane(farPlane);
-//        }
-//        if (obj->Has(NanNew<String>("intrinsic"))) {
-//            vector<float> intrinsic = getArray<float>(obj, "intrinsic");
-//            calib.setIntrinsicMatrix(intrinsic);
-//        }
-//        if (obj->Has(NanNew<String>("distortion"))) {
-//            vector<float> distortion = getArray<float>(obj, "distortion");
-//            calib.setDistortionMatrix(distortion);
-//        }
-//        if (obj->Has(NanNew<String>("imagePoints"))) {
-//            imagePoints = getArray<float>(obj,"imagePoints");
-//        }
-//        if (obj->Has(NanNew<String>("objectPoints"))) {
-//            objectPoints = getArray<float>(obj,"objectPoints");
-//        }
-//    }
-//
-//    Local<Object> result;
-//    bool success = true;
-//    bool isCamera = true;
-//    if (calib.calibrateFromPoints(imagePoints,objectPoints,isCamera)) {
-//        Handle<Object> camera = getCalibrationResult(calib,isCamera);
-//        result->Set(NanNew<String>("camera"), camera);
-//    } else {
-//        success = false;
-//    }
-//
-//    isCamera = false;
-//    if (success && calib.calibrateFromPoints(imagePoints,objectPoints,isCamera)) {
-//        Handle<Object> renderer = getCalibrationResult(calib,isCamera);
-//        result->Set(NanNew<String>("renderer"), renderer);
-//    } else {
-//        success = false;
-//    }
-//
-//    result->Set(NanNew<String>("success"), NanNew<Boolean>(success));
-//    NanReturnValue(result);
-//}
+namespace {
 
 template<class T>
-std::vector<T> getArray(const Local<Object> &obj, const std::string &name) {
+std::vector<T> getArray(const Napi::Object &obj, const char *name) {
+    Napi::Value val = obj.Get(name);
+    if (!val.IsArray()) {
+        throw Napi::TypeError::New(obj.Env(), std::string(name) + " must be an array of numbers");
+    }
+    Napi::Array array = val.As<Napi::Array>();
     std::vector<T> vect;
-    //Local<Value> val = obj->Get(String::Cast(name.c_str()));
-    Local<Value> val = obj->Get(String::NewFromUtf8(isolate, name.c_str()));
-    Local<Array> array = Local<Array>::Cast(val);
-    for (unsigned int i=0; i<array->Length(); ++i) {
-        Local<Number> n = Local<Number>::Cast(array->Get(i));
-        vect.push_back(n->Value());
+    vect.reserve(array.Length());
+    for (uint32_t i = 0; i < array.Length(); ++i) {
+        vect.push_back(static_cast<T>(array.Get(i).ToNumber().DoubleValue()));
     }
     return vect;
 }
 
 template<class T>
-T getNumber(const Local<Object> &obj, const std::string &name) {
-    //Local<Value> val = obj->Get(NanNew<String>(name.c_str()));
-    Local<Value> val = obj->Get(String::NewFromUtf8(isolate, name.c_str()));
-    T number = Local<Number>::Cast(val)->NumberValue();
-    return number;
+std::vector<T> getSizedArray(const Napi::Object &obj, const char *name, size_t minSize, size_t maxSize) {
+    std::vector<T> vect = getArray<T>(obj, name);
+    if (vect.size() < minSize || vect.size() > maxSize) {
+        std::string msg = std::string(name) + " must have " + std::to_string(minSize);
+        if (maxSize != minSize) msg += " to " + std::to_string(maxSize);
+        throw Napi::TypeError::New(obj.Env(), msg + " entries");
+    }
+    return vect;
 }
 
-std::string getString(const Local<Object> &obj, const std::string &name) {
-    //Local<Value> val = obj->Get(NanNew<String>(name.c_str()));
-    Local<Value> val = obj->Get(String::NewFromUtf8(isolate, name.c_str()));
-    String::Utf8Value str(val->ToString());
-    return string(*str);
+int getInt(const Napi::Object &obj, const char *name) {
+    return static_cast<int>(obj.Get(name).ToNumber().DoubleValue());
 }
 
-Local<Object> getCalibrationResult(Calibration &calib, bool isCamera) {
-    // projection matrix
-    vector<float> projVect = calib.getProjectionMatrix(isCamera);
-    Local<Array> projection = Array::New(isolate, projVect.size());
-    for (int i=0; i<(int)projVect.size(); ++i) {
-        projection->Set(i, Number::New(isolate, projVect[i]));
+Napi::Array toJsArray(Napi::Env env, const std::vector<float> &values) {
+    Napi::Array array = Napi::Array::New(env, values.size());
+    for (uint32_t i = 0; i < values.size(); ++i) {
+        array.Set(i, Napi::Number::New(env, values[i]));
     }
-    // modelview matrix
-    vector<float> mvVect = calib.getMvMatrix(isCamera);
-    Local<Array> mv = Array::New(isolate, mvVect.size());
-    for (int i=0; i<(int)mvVect.size(); i++) {
-        mv->Set(i, Number::New(isolate, mvVect[i]));
-    }
-    // create result object
-    Local<Object> result = Object::New(isolate);
-    result->Set(String::NewFromUtf8(isolate, "projection"), projection);
-    result->Set(String::NewFromUtf8(isolate, "modelview"), mv);
+    return array;
+}
 
+Napi::Object getCalibrationResult(Napi::Env env, const Calibration &calib, bool isCamera) {
+    Napi::Object result = Napi::Object::New(env);
+    result.Set("projection", toJsArray(env, calib.getProjectionMatrix(isCamera)));
+    result.Set("modelview", toJsArray(env, calib.getMvMatrix(isCamera)));
     return result;
 }
 
-void getCalibrationPoints(const FunctionCallbackInfo<Value>& args, vector<float>& imagePoints, vector<float>& objectPoints) {
-    if (args[0]->IsObject()) {
-        Local<Object> obj = Local<Object>::Cast(args[0]);
-        Local<String> imageStr = String::NewFromUtf8(isolate, "imagePoints");
-        Local<String> objectStr = String::NewFromUtf8(isolate, "objectPoints");
-        if (obj->Has(imageStr)) {
-            imagePoints = getArray<float>(obj, "imagePoints");
-        }
-        if (obj->Has(objectStr)) {
-            objectPoints = getArray<float>(obj, "objectPoints");
-        }
+void configureCalibration(const Napi::CallbackInfo &info, Calibration &calib, std::string &filename) {
+    if (info.Length() < 1 || !info[0].IsObject()) return;
+    Napi::Object obj = info[0].As<Napi::Object>();
+
+    if (obj.Has("frameSize")) {
+        std::vector<int> v = getSizedArray<int>(obj, "frameSize", 2, 2);
+        calib.setFrameSize(cv::Size(v[0], v[1]));
+    }
+    if (obj.Has("nearPlane")) {
+        calib.setNearPlane(getInt(obj, "nearPlane"));
+    }
+    if (obj.Has("farPlane")) {
+        calib.setFarPlane(getInt(obj, "farPlane"));
+    }
+    if (obj.Has("chessboardSize")) {
+        std::vector<int> v = getSizedArray<int>(obj, "chessboardSize", 2, 2);
+        calib.setChessboardSize(cv::Size(v[0], v[1]));
+    }
+    if (obj.Has("chessboardCellSize")) {
+        calib.setChessboardCellSize(getInt(obj, "chessboardCellSize"));
+    }
+    if (obj.Has("intrinsic")) {
+        calib.setIntrinsicMatrix(getSizedArray<float>(obj, "intrinsic", 9, 9));
+    }
+    if (obj.Has("distortion")) {
+        calib.setDistortionMatrix(getSizedArray<float>(obj, "distortion", 0, 5));
+    }
+    if (obj.Has("filename")) {
+        filename = obj.Get("filename").ToString().Utf8Value();
     }
 }
 
-void configureCalibration(const FunctionCallbackInfo<Value>& args, Calibration &calib, string &filename) {
-    if (args[0]->IsObject()) {
-        Local<Object> obj = Local<Object>::Cast(args[0]);
-        Local<String> frameSize = String::NewFromUtf8(isolate, "frameSize");
-        Local<String> nearPlane = String::NewFromUtf8(isolate, "nearPlane");
-        Local<String> farPlane = String::NewFromUtf8(isolate, "farPlane");
-        Local<String> chessboardSize = String::NewFromUtf8(isolate, "chessboardSize");
-        Local<String> chessboardCellSize = String::NewFromUtf8(isolate, "chessboardCellSize");
-        Local<String> intrinsic = String::NewFromUtf8(isolate, "intrinsic");
-        Local<String> distortion = String::NewFromUtf8(isolate, "distortion");
-        Local<String> filenameMember = String::NewFromUtf8(isolate, "filename");
-        if (obj->Has(frameSize)) {
-            std::vector<int> vect = getArray<int>(obj, "frameSize");
-            cv::Size frameSize = cv::Size(vect[0], vect[1]);
-            calib.setFrameSize(frameSize);
-        }
-        if (obj->Has(nearPlane)) {
-            int nearPlane = getNumber<int>(obj, "nearPlane");
-            calib.setNearPlane(nearPlane);
-        }
-        if(obj->Has(farPlane)) {
-            int farPlane = getNumber<int>(obj, "farPlane");
-            calib.setFarPlane(farPlane);
-        }
-        if(obj->Has(chessboardSize)) {
-            std::vector<int> vect = getArray<int>(obj, "chessboardSize");
-            cv::Size chessboardSize = cv::Size(vect[0], vect[1]);
-            calib.setChessboardSize(chessboardSize);
-        }
-        if (obj->Has(chessboardCellSize)) {
-            int cellSize = getNumber<int>(obj, "chessboardCellSize");
-            calib.setChessboardCellSize(cellSize);
-        }
-        if (obj->Has(intrinsic)) {
-            vector<float> intrinsic = getArray<float>(obj, "intrinsic");
-            calib.setIntrinsicMatrix(intrinsic);
-        }
-        if (obj->Has(distortion)) {
-            vector<float> distortion = getArray<float>(obj, "distortion");
-            calib.setDistortionMatrix(distortion);
-        }
-        if (obj->Has(filenameMember)) {
-            filename = getString(obj, "filename");
-        }
+void getCalibrationPoints(const Napi::CallbackInfo &info, std::vector<float> &imagePoints, std::vector<float> &objectPoints) {
+    if (info.Length() < 1 || !info[0].IsObject()) return;
+    Napi::Object obj = info[0].As<Napi::Object>();
+    if (obj.Has("imagePoints")) {
+        imagePoints = getArray<float>(obj, "imagePoints");
+    }
+    if (obj.Has("objectPoints")) {
+        objectPoints = getArray<float>(obj, "objectPoints");
+    }
+    if (imagePoints.size() % 2 != 0 || imagePoints.size() != objectPoints.size()) {
+        throw Napi::TypeError::New(info.Env(),
+            "imagePoints and objectPoints must be flat [x, y, ...] arrays of the same length");
     }
 }
 
-
-void Calibrate(const FunctionCallbackInfo<Value>& args) {
-    isolate = args.GetIsolate();
-    Calibration calib;
-    string filename = "";
-    configureCalibration(args, calib, filename);
-
-    Local<Object> result = Object::New(isolate);
+// Runs the camera then the renderer calibration, building the same result
+// object as 0.2.x: {camera, renderer, success}, stopping at the first failure.
+template<class F>
+Napi::Value runCalibration(Napi::Env env, F calibrateOne, Calibration &calib) {
+    Napi::Object result = Napi::Object::New(env);
     bool success = true;
-    bool isCamera = true;
-    if (calib.calibrate(filename,isCamera)) {
-        Local<Object> camera = getCalibrationResult(calib,isCamera);
-        result->Set(Local<String>(String::NewFromUtf8(isolate, "camera")), camera);
-    } else {
-        success = false;
+    try {
+        if (calibrateOne(true)) {
+            result.Set("camera", getCalibrationResult(env, calib, true));
+        } else {
+            success = false;
+        }
+        if (success && calibrateOne(false)) {
+            result.Set("renderer", getCalibrationResult(env, calib, false));
+        } else {
+            success = false;
+        }
+    } catch (const Napi::Error &) {
+        throw;
+    } catch (const std::exception &e) {
+        throw Napi::Error::New(env, std::string("tinkercalib: ") + e.what());
     }
-
-    isCamera = false;
-    if (success && calib.calibrate(filename,isCamera)) {
-        Local<Object> renderer = getCalibrationResult(calib, isCamera);
-        result->Set(String::NewFromUtf8(isolate,"renderer"), renderer);
-    } else {
-        success = false;
-    }
-
-    Local<Boolean> successValue = Boolean::New(isolate,success);
-    result->Set(String::NewFromUtf8(isolate,"success"), successValue);
-    args.GetReturnValue().Set(result);
+    result.Set("success", Napi::Boolean::New(env, success));
+    return result;
 }
 
-
-void CalibrateFromPoints(const FunctionCallbackInfo<Value>& args) {
-    isolate = args.GetIsolate();
+Napi::Value Calibrate(const Napi::CallbackInfo &info) {
     Calibration calib;
-    string filename = "";
-    configureCalibration(args, calib, filename);
-
-    vector<float> imagePoints, objectPoints;
-    getCalibrationPoints(args, imagePoints, objectPoints);
-
-
-    Local<Object> result = Object::New(isolate);
-    bool success = true;
-    bool isCamera = true;
-    if (calib.calibrateFromPoints(imagePoints,objectPoints,isCamera)) {
-        Local<Object> camera = getCalibrationResult(calib,isCamera);
-        result->Set(String::NewFromUtf8(isolate,"camera"), camera);
-    } else {
-        success = false;
-    }
-
-    isCamera = false;
-    if (success && calib.calibrateFromPoints(imagePoints,objectPoints,isCamera)) {
-        Local<Object> renderer = getCalibrationResult(calib,isCamera);
-        result->Set(String::NewFromUtf8(isolate, "renderer"), renderer);
-    } else {
-        success = false;
-    }
-
-    result->Set(String::NewFromUtf8(isolate,"success"), Boolean::New(isolate, success));
-    args.GetReturnValue().Set(result);
+    std::string filename;
+    configureCalibration(info, calib, filename);
+    return runCalibration(info.Env(), [&](bool isCamera) {
+        return calib.calibrate(filename, isCamera);
+    }, calib);
 }
 
-void init(Local<Object> exports)
-{
-    NODE_SET_METHOD(exports, "calibrate", Calibrate);
-    NODE_SET_METHOD(exports, "calibrateFromPoints", CalibrateFromPoints);
+Napi::Value CalibrateFromPoints(const Napi::CallbackInfo &info) {
+    Calibration calib;
+    std::string filename;
+    configureCalibration(info, calib, filename);
+    std::vector<float> imagePoints, objectPoints;
+    getCalibrationPoints(info, imagePoints, objectPoints);
+    return runCalibration(info.Env(), [&](bool isCamera) {
+        return calib.calibrateFromPoints(imagePoints, objectPoints, isCamera);
+    }, calib);
 }
 
-NODE_MODULE(tinkercalib, init)
+Napi::Object Init(Napi::Env env, Napi::Object exports) {
+    exports.Set("calibrate", Napi::Function::New(env, Calibrate, "calibrate"));
+    exports.Set("calibrateFromPoints", Napi::Function::New(env, CalibrateFromPoints, "calibrateFromPoints"));
+    return exports;
+}
+
+}  // namespace
+
+NODE_API_MODULE(tinkercalib, Init)

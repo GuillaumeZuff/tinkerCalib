@@ -1,2 +1,4 @@
-build using node 8 (lts/carbon), higher versions don't work because of V8 engine updates
-
+Needs OpenCV 4 (or 3/5) found by pkg-config, a C++17 compiler and Python for node-gyp.
+Ubuntu: sudo apt-get install libopencv-dev build-essential python3 pkg-config
+macOS:  brew install opencv pkgconf
+Build + test: ./build.sh  (npm install && npm test)
