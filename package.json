@@ -1,12 +1,28 @@
 {
   "name": "tinkercalib",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A wrapper around several openCV calibration functions.",
   "main": "build/Release/tinkercalib.node",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "install": "node-gyp rebuild",
+    "test": "node --test test/"
   },
-  "repository": "",
+  "dependencies": {
+    "node-addon-api": "^8.3.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "binding.gyp",
+    "src/*.cc",
+    "src/*.cpp",
+    "src/*.h",
+    "utils/",
+    "test/",
+    "testData/"
+  ],
+  "repository": "github:GuillaumeZuff/tinkerCalib",
   "author": "",
   "license": "BSD"
 }
